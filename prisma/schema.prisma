@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum PlayerStatus {
+  INVITED
+  ACTIVE
+  INACTIVE
+}
+
+enum TournamentStatus {
+  DRAFT
+  SCHEDULED
+  LIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum TournamentFormat {
+  ROUND_ROBIN
+  KNOCKOUT
+}
+
+enum MatchStatus {
+  UPCOMING
+  LIVE
+  COMPLETED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+// ─── Core Entities ───────────────────────────────────────────────────────────
+
+model User {
+  id         String   @id @default(cuid())
+  supabaseId String   @unique
+  email      String   @unique
+  name       String?
+  avatarUrl  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  ownedPlayers Player[]      @relation("OwnedPlayers")
+  linkedPlayer Player[]      @relation("LinkedPlayer")
+  groups       Group[]
+  tournaments  Tournament[]
+  invitations  Invitation[]
+  activityLogs ActivityLog[]
+
+  @@index([supabaseId])
+  @@index([email])
+}
+
+model Player {
+  id        String       @id @default(cuid())
+  name      String
+  email     String?
+  avatarUrl String?
+  status    PlayerStatus @default(ACTIVE)
+  phone     String?
+  notes     String?
+
+  userId  String?
+  user    User?   @relation("LinkedPlayer", fields: [userId], references: [id])
+  ownerId String
+  owner   User    @relation("OwnedPlayers", fields: [ownerId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  groupMembers           GroupMember[]
+  tournamentParticipants TournamentParticipant[]
+  teamMembers            TeamMember[]
+  invitations            Invitation[]
+
+  @@index([ownerId])
+  @@index([email])
+  @@index([status])
+}
+
+model Group {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  members     GroupMember[]
+  tournaments Tournament[]  @relation("TournamentGroup")
+
+  @@index([ownerId])
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  playerId String
+  player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@unique([groupId, playerId])
+  @@index([groupId])
+  @@index([playerId])
+}
+
+model Tournament {
+  id            String           @id @default(cuid())
+  name          String
+  description   String?
+  status        TournamentStatus @default(DRAFT)
+  format        TournamentFormat @default(ROUND_ROBIN)
+  teamSize      Int              @default(2)
+  sourceGroupId String?
+  sourceGroup   Group?           @relation("TournamentGroup", fields: [sourceGroupId], references: [id])
+  ownerId       String
+  owner         User             @relation(fields: [ownerId], references: [id])
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?
+
+  participants TournamentParticipant[]
+  teams        Team[]
+  matches      Match[]
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model TournamentParticipant {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  playerId     String
+  player       Player     @relation(fields: [playerId], references: [id])
+  addedAt      DateTime   @default(now())
+
+  @@unique([tournamentId, playerId])
+  @@index([tournamentId])
+  @@index([playerId])
+}
+
+model Team {
+  id           String     @id @default(cuid())
+  name         String
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  members     TeamMember[]
+  homeMatches Match[]      @relation("HomeTeam")
+  awayMatches Match[]      @relation("AwayTeam")
+
+  @@index([tournamentId])
+}
+
+model TeamMember {
+  id       String @id @default(cuid())
+  teamId   String
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id])
+
+  @@unique([teamId, playerId])
+  @@index([teamId])
+  @@index([playerId])
+}
+
+model Match {
+  id           String      @id @default(cuid())
+  tournamentId String
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  homeTeamId   String
+  homeTeam     Team        @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId   String
+  awayTeam     Team        @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  status       MatchStatus @default(UPCOMING)
+  round        Int?
+  sequence     Int?
+  homeScore    Int?
+  awayScore    Int?
+  winnerId     String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([tournamentId])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+  @@index([status])
+}
+
+model Invitation {
+  id          String           @id @default(cuid())
+  email       String
+  status      InvitationStatus @default(PENDING)
+  token       String           @unique @default(cuid())
+  invitedById String
+  invitedBy   User             @relation(fields: [invitedById], references: [id])
+  playerId    String?
+  player      Player?          @relation(fields: [playerId], references: [id])
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+  acceptedAt  DateTime?
+
+  @@index([email])
+  @@index([token])
+  @@index([invitedById])
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
