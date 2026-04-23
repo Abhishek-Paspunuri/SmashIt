@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { getMatch, startMatch, completeMatch } from "@/lib/services/matches";
+import { getMatch, startMatch, completeMatch, updateMatch } from "@/lib/services/matches";
 import { z } from "zod";
 
 const completeSchema = z.object({
@@ -45,6 +45,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
       }
       const match = await completeMatch(id, user.id, {
+        winnerId: parsed.data.winnerId,
+        homeScore: parsed.data.homeScore,
+        awayScore: parsed.data.awayScore,
+      });
+      return NextResponse.json({ data: match });
+    }
+
+    if (body.action === "update") {
+      const parsed = completeSchema.safeParse({ ...body, action: "complete" });
+      if (!parsed.success) {
+        return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+      }
+      const match = await updateMatch(id, user.id, {
         winnerId: parsed.data.winnerId,
         homeScore: parsed.data.homeScore,
         awayScore: parsed.data.awayScore,

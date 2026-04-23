@@ -41,7 +41,7 @@ export async function getPlayer(id: string, ownerId: string) {
 
 export async function createPlayer(
   ownerId: string,
-  data: { name: string; email?: string; phone?: string; notes?: string; status?: PlayerStatus }
+  data: { name: string; email?: string; notes?: string; status?: PlayerStatus }
 ) {
   return prisma.player.create({
     data: {
@@ -55,7 +55,7 @@ export async function createPlayer(
 export async function updatePlayer(
   id: string,
   ownerId: string,
-  data: { name?: string; email?: string; phone?: string; notes?: string; status?: PlayerStatus }
+  data: { name?: string; email?: string; notes?: string; status?: PlayerStatus }
 ) {
   return prisma.player.updateMany({
     where: { id, ownerId, deletedAt: null },

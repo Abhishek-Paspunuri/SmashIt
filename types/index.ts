@@ -15,6 +15,7 @@ import type {
   TournamentFormat,
   MatchStatus,
   InvitationStatus,
+  PlayoffMatch,
 } from "@prisma/client";
 
 export type {
@@ -34,6 +35,7 @@ export type {
   TournamentFormat,
   MatchStatus,
   InvitationStatus,
+  PlayoffMatch,
 };
 
 // Extended types with relations
@@ -100,6 +102,11 @@ export interface MatchCountByDate {
   date: string;
   count: number;
 }
+
+export type PlayoffMatchWithTeams = PlayoffMatch & {
+  homeTeam: TeamWithMembers | null;
+  awayTeam: TeamWithMembers | null;
+};
 
 // Re-export RankedTeam
 export type { RankedTeam, TeamStats } from "@/lib/utils/rankings";

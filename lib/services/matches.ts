@@ -69,3 +69,23 @@ export async function completeMatch(id: string, ownerId: string, input: Complete
 
   return updated;
 }
+
+export async function updateMatch(id: string, ownerId: string, input: CompleteMatchInput) {
+  const match = await prisma.match.findFirst({
+    where: { id, tournament: { ownerId }, status: "COMPLETED" },
+  });
+  if (!match) throw new Error("Match not found or not completed");
+
+  if (input.winnerId !== match.homeTeamId && input.winnerId !== match.awayTeamId) {
+    throw new Error("Invalid winner");
+  }
+
+  return prisma.match.update({
+    where: { id },
+    data: {
+      homeScore: input.homeScore,
+      awayScore: input.awayScore,
+      winnerId: input.winnerId,
+    },
+  });
+}

@@ -5,7 +5,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerStatusBadge, Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import { Mail, Phone, FileText, Trophy, Users } from "lucide-react";
+import { Mail, FileText, Trophy, Users } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -54,12 +54,6 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
               </div>
             ) : (
               <p className="text-sm text-[var(--color-muted)]">No email on file</p>
-            )}
-            {player.phone && (
-              <div className="flex items-center gap-2 text-sm text-[var(--color-foreground)]">
-                <Phone className="h-4 w-4 text-[var(--color-muted)]" />
-                {player.phone}
-              </div>
             )}
             {player.notes && (
               <div className="flex items-start gap-2 text-sm text-[var(--color-foreground)] pt-1">

@@ -6,8 +6,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Image from "next/image";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,7 +23,6 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     const supabase = createClient();
-
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -33,7 +31,6 @@ export default function RegisterPage() {
         emailRedirectTo: `${window.location.origin}/api/auth/callback`,
       },
     });
-
     if (error) {
       setError(error.message);
       setLoading(false);
@@ -48,9 +45,7 @@ export default function RegisterPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
     });
     if (error) {
       setError(error.message);
@@ -58,99 +53,169 @@ export default function RegisterPage() {
     }
   }
 
+  const inputStyle = {
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.08)",
+  };
+  const inputFocusStyle = {
+    border: "1px solid rgba(249,115,22,0.5)",
+    background: "rgba(249,115,22,0.06)",
+  };
+
   if (success) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center px-4 text-center">
-        <div className="text-5xl mb-4">📧</div>
-        <h2 className="text-xl font-bold text-[var(--color-foreground)] mb-2">Check your email</h2>
-        <p className="text-sm text-[var(--color-muted)] max-w-xs">
-          We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.
-        </p>
-        <Link href="/login" className="mt-6 text-sm text-orange-500 font-medium hover:underline">
-          Back to Login
-        </Link>
+      <div className="min-h-dvh flex flex-col items-center justify-center px-4 text-center animate-scale-bounce-in">
+        <div
+          className="rounded-2xl p-8 max-w-sm w-full"
+          style={{
+            background: "rgba(28,28,30,0.95)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 32px 64px -12px rgba(0,0,0,0.8)",
+          }}
+        >
+          <div className="text-5xl mb-4">📧</div>
+          <h2 className="text-xl font-bold text-white mb-2">Check your email</h2>
+          <p className="text-sm text-[#888] max-w-xs mx-auto">
+            We sent a confirmation link to{" "}
+            <strong className="text-white">{email}</strong>.
+            Click it to activate your account.
+          </p>
+          <Link
+            href="/login"
+            className="mt-6 inline-block text-sm text-orange-400 font-semibold hover:text-orange-300 transition-colors"
+          >
+            Back to Login
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center bg-[var(--color-surface)] px-4">
-      <div className="mb-8 text-center">
-        <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-orange-500 shadow-lg mb-4">
-          <span className="text-3xl">🏸</span>
+    <div className="relative min-h-dvh flex flex-col items-center justify-center px-4 py-12">
+
+      {/* ── Logo ── */}
+      <div className="mb-10 text-center animate-scale-bounce-in">
+        <div className="relative inline-flex items-center justify-center mb-5">
+          <span className="absolute h-28 w-28 rounded-3xl bg-orange-500/15 blur-2xl animate-pulse" />
+          <span className="absolute h-20 w-20 rounded-2xl bg-orange-500/20 blur-lg" />
+          <div className="relative h-20 w-20 rounded-2xl overflow-hidden shadow-2xl shadow-orange-500/40 ring-1 ring-orange-500/30">
+            <Image
+              src="/logo.png"
+              alt="Smash"
+              width={80}
+              height={80}
+              className="h-full w-full object-cover"
+              priority
+            />
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-[var(--color-foreground)]">Create Account</h1>
-        <p className="text-sm text-[var(--color-muted)] mt-1">Join Smash and start playing.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-white animate-fade-in-up delay-75">
+          Create Account
+        </h1>
+        <p className="text-sm text-[#888] mt-1.5 animate-fade-in-up delay-150">
+          Join Smash and start playing.
+        </p>
       </div>
 
-      <div className="w-full max-w-sm">
-        <Button
-          variant="outline"
-          className="w-full mb-4 gap-3"
-          onClick={handleGoogleLogin}
-          loading={googleLoading}
-          size="lg"
+      {/* ── Card ── */}
+      <div className="w-full max-w-sm animate-fade-in-up delay-150">
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            background: "rgba(28, 28, 30, 0.95)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 32px 64px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04) inset",
+          }}
         >
-          <GoogleIcon />
-          Continue with Google
-        </Button>
+          {/* Google */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading}
+            className="w-full h-11 rounded-xl flex items-center justify-center gap-3 text-sm font-medium text-white transition-all duration-150 active:scale-95 disabled:opacity-50"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            {googleLoading ? (
+              <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            ) : (
+              <>
+                <GoogleIcon />
+                Continue with Google
+              </>
+            )}
+          </button>
 
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[var(--color-border)]" />
+          {/* Divider */}
+          <div className="relative my-5 flex items-center gap-3">
+            <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+            <span className="text-xs text-[#555] shrink-0">or create with email</span>
+            <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
           </div>
-          <div className="relative flex justify-center">
-            <span className="bg-[var(--color-surface)] px-3 text-xs text-[var(--color-muted)]">
-              or create with email
-            </span>
-          </div>
+
+          {/* Form */}
+          <form onSubmit={handleRegister} className="space-y-3">
+            {[
+              { label: "Full Name", type: "text", placeholder: "Alex Smash", value: name, onChange: (v: string) => setName(v), autoComplete: "name" },
+              { label: "Email", type: "email", placeholder: "you@example.com", value: email, onChange: (v: string) => setEmail(v), autoComplete: "email" },
+              { label: "Password", type: "password", placeholder: "Min. 8 characters", value: password, onChange: (v: string) => setPassword(v), autoComplete: "new-password" },
+            ].map(({ label, type, placeholder, value, onChange, autoComplete }) => (
+              <div key={label} className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[#999]">{label}</label>
+                <input
+                  type={type}
+                  placeholder={placeholder}
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  required
+                  autoComplete={autoComplete}
+                  minLength={label === "Password" ? 8 : undefined}
+                  className="h-11 w-full rounded-xl px-3.5 text-sm text-white placeholder:text-[#444] outline-none transition-all duration-150"
+                  style={inputStyle}
+                  onFocus={(e) => Object.assign(e.currentTarget.style, inputFocusStyle)}
+                  onBlur={(e) => Object.assign(e.currentTarget.style, inputStyle)}
+                />
+              </div>
+            ))}
+
+            {error && (
+              <div
+                className="text-sm text-red-400 rounded-xl p-3 animate-fade-in-up"
+                style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.2)" }}
+              >
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 rounded-xl text-sm font-semibold text-white transition-all duration-150 active:scale-95 disabled:opacity-50 btn-shine mt-1"
+              style={{
+                background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                boxShadow: "0 4px 16px -2px rgba(249,115,22,0.45)",
+              }}
+            >
+              {loading ? (
+                <span className="inline-flex items-center justify-center">
+                  <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                </span>
+              ) : (
+                "Create Account"
+              )}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-[#666] mt-5">
+            Already have an account?{" "}
+            <Link href="/login" className="text-orange-400 font-semibold hover:text-orange-300 transition-colors">
+              Sign In
+            </Link>
+          </p>
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-3">
-          <Input
-            label="Full Name"
-            type="text"
-            placeholder="Alex Smash"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <Input
-            label="Email"
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-          <Input
-            label="Password"
-            type="password"
-            placeholder="Min. 8 characters"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            autoComplete="new-password"
-          />
-
-          {error && (
-            <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg p-3">
-              {error}
-            </p>
-          )}
-
-          <Button type="submit" className="w-full" loading={loading} size="lg">
-            Create Account
-          </Button>
-        </form>
-
-        <p className="text-center text-sm text-[var(--color-muted)] mt-6">
-          Already have an account?{" "}
-          <Link href="/login" className="text-orange-500 font-medium hover:underline">
-            Sign In
-          </Link>
+        <p className="text-center text-[11px] text-[#444] mt-4">
+          🏸 Track your game. Rise on the leaderboard.
         </p>
       </div>
     </div>
@@ -159,7 +224,7 @@ export default function RegisterPage() {
 
 function GoogleIcon() {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
       <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />

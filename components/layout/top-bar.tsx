@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/avatar";
-import { LogOut, Bell, Sun, Moon } from "lucide-react";
+import SmashLogo from "@/public/smashit-logo.png";
+import { LogOut, Sun, Moon } from "lucide-react";
 import type { User } from "@prisma/client";
 import { useTheme } from "@/components/theme-provider";
 
@@ -27,11 +29,14 @@ export function TopBar({ user, title }: TopBarProps) {
     <header className="sm:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14 border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-md">
       {/* Logo/Title */}
       <div className="flex items-center gap-2">
-        <div className="h-8 w-8 rounded-xl bg-orange-500 flex items-center justify-center">
-          <span className="text-base">🏸</span>
-        </div>
+        {/* <SmashLogo size={32} /> */}
+        <img
+          src={SmashLogo.src}
+          alt="Smash Logo"
+          className="h-8 w-10 overflow-hidden"
+        />
         <span className="font-bold text-[var(--color-foreground)]">
-          {title ?? "Smash"}
+          {title ?? "Smash It"}
         </span>
       </div>
 
@@ -54,7 +59,14 @@ export function TopBar({ user, title }: TopBarProps) {
         >
           <LogOut className="h-4.5 w-4.5" />
         </button>
-        <Avatar name={user.name ?? user.email} src={user.avatarUrl} size="sm" />
+        {/* Profile icon → My Organisation */}
+        <Link href="/organisation">
+          <Avatar
+            name={user.name ?? user.email}
+            src={user.avatarUrl}
+            size="sm"
+          />
+        </Link>
       </div>
     </header>
   );

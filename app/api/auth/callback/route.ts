@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { ensureSelfPlayer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
     if (!error && data.user) {
       // Sync user to our DB
       const supabaseUser = data.user;
-      await prisma.user.upsert({
+      const user = await prisma.user.upsert({
         where: { supabaseId: supabaseUser.id },
         create: {
           supabaseId: supabaseUser.id,
@@ -40,6 +41,9 @@ export async function GET(request: Request) {
             undefined,
         },
       });
+
+      // Ensure the user has a self-player record (idempotent)
+      await ensureSelfPlayer(user);
 
       return NextResponse.redirect(`${origin}${next}`);
     }

@@ -6,8 +6,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +21,10 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     if (error) {
       setError(error.message);
       setLoading(false);
@@ -38,9 +40,7 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
     });
     if (error) {
       setError(error.message);
@@ -49,78 +49,178 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center bg-[var(--color-surface)] px-4">
-      {/* Logo */}
-      <div className="mb-8 text-center">
-        <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-orange-500 shadow-lg mb-4">
-          <span className="text-3xl">🏸</span>
+    <div className="relative min-h-dvh flex flex-col items-center justify-center px-4 py-12">
+      {/* ── Logo ── */}
+      <div className="mb-10 text-center animate-scale-bounce-in">
+        <div className="relative inline-flex items-center justify-center mb-5">
+          {/* Outer pulsing ring */}
+          <span className="absolute h-28 w-28 rounded-3xl bg-orange-500/15 blur-2xl animate-pulse" />
+          {/* Inner glow */}
+          <span className="absolute h-20 w-20 rounded-2xl bg-orange-500/20 blur-lg" />
+          {/* Logo image */}
+          <div className="relative h-20 w-20 rounded-2xl overflow-hidden shadow-2xl shadow-orange-500/40 ring-1 ring-orange-500/30 bg-[#1a1a1a]">
+            <Image
+              src="/smashit-logo.png"
+              alt="Smash"
+              width={80}
+              height={80}
+              className="h-full w-full object-contain p-1.5"
+              priority
+            />
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-[var(--color-foreground)]">Smash</h1>
-        <p className="text-sm text-[var(--color-muted)] mt-1">Badminton, organized.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-white animate-fade-in-up delay-75">
+          Smash It
+        </h1>
+        <p className="text-sm text-[#888] mt-1.5 animate-fade-in-up delay-150">
+          Badminton, organized.
+        </p>
       </div>
 
-      <div className="w-full max-w-sm">
-        {/* Google */}
-        <Button
-          variant="outline"
-          className="w-full mb-4 gap-3"
-          onClick={handleGoogleLogin}
-          loading={googleLoading}
-          size="lg"
+      {/* ── Card ── */}
+      <div className="w-full max-w-sm animate-fade-in-up delay-150">
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            background: "#1c1c1e",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow:
+              "0 32px 64px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04) inset",
+          }}
         >
-          <GoogleIcon />
-          Continue with Google
-        </Button>
+          {/* Google */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading}
+            className="w-full h-11 rounded-xl flex items-center justify-center gap-3 text-sm font-medium text-white transition-all duration-150 active:scale-95 disabled:opacity-50"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
+            {googleLoading ? (
+              <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            ) : (
+              <>
+                <GoogleIcon />
+                Continue with Google
+              </>
+            )}
+          </button>
 
-        {/* Divider */}
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[var(--color-border)]" />
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-[var(--color-surface)] px-3 text-xs text-[var(--color-muted)]">
+          {/* Divider */}
+          <div className="relative my-5 flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/8" />
+            <span className="text-xs text-[#555] shrink-0">
               or sign in with email
             </span>
+            <div className="flex-1 h-px bg-white/8" />
           </div>
+
+          {/* Email form */}
+          <form onSubmit={handleEmailLogin} className="space-y-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[#999]">Email</label>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className="h-11 w-full rounded-xl px-3.5 text-sm text-white placeholder:text-[#444] outline-none transition-all duration-150 focus:ring-2 focus:ring-orange-500/40"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.border =
+                    "1px solid rgba(249,115,22,0.5)";
+                  e.currentTarget.style.background = "rgba(249,115,22,0.06)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.border =
+                    "1px solid rgba(255,255,255,0.08)";
+                  e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                }}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[#999]">
+                Password
+              </label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                className="h-11 w-full rounded-xl px-3.5 text-sm text-white placeholder:text-[#444] outline-none transition-all duration-150 focus:ring-2 focus:ring-orange-500/40"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.border =
+                    "1px solid rgba(249,115,22,0.5)";
+                  e.currentTarget.style.background = "rgba(249,115,22,0.06)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.border =
+                    "1px solid rgba(255,255,255,0.08)";
+                  e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                }}
+              />
+            </div>
+
+            {error && (
+              <div
+                className="text-sm text-red-400 rounded-xl p-3 animate-fade-in-up"
+                style={{
+                  background: "rgba(239,68,68,0.12)",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 rounded-xl text-sm font-semibold text-white transition-all duration-150 active:scale-95 disabled:opacity-50 btn-shine mt-1"
+              style={{
+                background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                boxShadow: "0 4px 16px -2px rgba(249,115,22,0.45)",
+              }}
+            >
+              {loading ? (
+                <span className="inline-flex items-center justify-center">
+                  <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                </span>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+          </form>
+
+          {/* Footer link */}
+          <p className="text-center text-sm text-[#666] mt-5">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/register"
+              className="text-orange-400 font-semibold hover:text-orange-300 transition-colors"
+            >
+              Create one
+            </Link>
+          </p>
         </div>
 
-        {/* Email form */}
-        <form onSubmit={handleEmailLogin} className="space-y-3">
-          <Input
-            label="Email"
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-          <Input
-            label="Password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-
-          {error && (
-            <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg p-3">
-              {error}
-            </p>
-          )}
-
-          <Button type="submit" className="w-full" loading={loading} size="lg">
-            Sign In
-          </Button>
-        </form>
-
-        <p className="text-center text-sm text-[var(--color-muted)] mt-6">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-orange-500 font-medium hover:underline">
-            Create one
-          </Link>
+        <p className="text-center text-[11px] text-[#444] mt-4">
+          🏸 Track your game. Rise on the leaderboard.
         </p>
       </div>
     </div>
@@ -129,7 +229,7 @@ export default function LoginPage() {
 
 function GoogleIcon() {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
       <path
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
         fill="#4285F4"

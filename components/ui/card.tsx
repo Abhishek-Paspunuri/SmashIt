@@ -3,14 +3,16 @@ import { type HTMLAttributes } from "react";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   padded?: boolean;
+  lift?: boolean;
 }
 
-export function Card({ className, padded = true, children, ...props }: CardProps) {
+export function Card({ className, padded = true, lift = false, children, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm",
+        "rounded-xl border border-border bg-surface shadow-sm",
         padded && "p-4",
+        lift && "card-lift",
         className
       )}
       {...props}
@@ -30,7 +32,7 @@ export function CardHeader({ className, children, ...props }: HTMLAttributes<HTM
 
 export function CardTitle({ className, children, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3 className={cn("font-semibold text-base text-[var(--color-foreground)]", className)} {...props}>
+    <h3 className={cn("font-semibold text-base text-foreground", className)} {...props}>
       {children}
     </h3>
   );

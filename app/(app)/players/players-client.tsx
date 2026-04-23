@@ -11,7 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PlayerCardSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { Plus, Search, Users, Phone, Mail, MoreVertical, Pencil, Trash2, UserCheck } from "lucide-react";
+import { Plus, Search, Users, Mail, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import type { Player, PlayerStatus } from "@prisma/client";
 
 interface PlayerWithGroups extends Player {
@@ -51,7 +51,6 @@ export function PlayersClient({ initialPlayers }: PlayersClientProps) {
     const body = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
       notes: formData.get("notes") as string,
     };
 
@@ -237,12 +236,6 @@ function PlayerCard({
                 {player.email}
               </span>
             )}
-            {player.phone && (
-              <span className="text-xs text-[var(--color-muted)] flex items-center gap-1">
-                <Phone className="h-3 w-3 shrink-0" />
-                {player.phone}
-              </span>
-            )}
           </div>
           {player.groupMembers.length > 0 && (
             <div className="flex gap-1 mt-1 flex-wrap">
@@ -309,7 +302,6 @@ function PlayerForm({
     >
       <Input label="Name *" name="name" defaultValue={defaultValues?.name} required placeholder="Alex Smash" />
       <Input label="Email" name="email" type="email" defaultValue={defaultValues?.email ?? ""} placeholder="alex@example.com" />
-      <Input label="Phone" name="phone" defaultValue={defaultValues?.phone ?? ""} placeholder="+1 555 0100" />
       <div className="flex flex-col gap-1">
         <label className="text-sm font-medium text-[var(--color-foreground)]">Notes</label>
         <textarea

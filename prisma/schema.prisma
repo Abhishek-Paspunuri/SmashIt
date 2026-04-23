@@ -69,7 +69,6 @@ model Player {
   email     String?
   avatarUrl String?
   status    PlayerStatus @default(ACTIVE)
-  phone     String?
   notes     String?
 
   userId  String?
@@ -137,9 +136,10 @@ model Tournament {
   updatedAt     DateTime         @updatedAt
   deletedAt     DateTime?
 
-  participants TournamentParticipant[]
-  teams        Team[]
-  matches      Match[]
+  participants    TournamentParticipant[]
+  teams           Team[]
+  matches         Match[]
+  playoffMatches  PlayoffMatch[]
 
   @@index([ownerId])
   @@index([status])
@@ -166,9 +166,11 @@ model Team {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  members     TeamMember[]
-  homeMatches Match[]      @relation("HomeTeam")
-  awayMatches Match[]      @relation("AwayTeam")
+  members            TeamMember[]
+  homeMatches        Match[]        @relation("HomeTeam")
+  awayMatches        Match[]        @relation("AwayTeam")
+  playoffHomeMatches PlayoffMatch[] @relation("PlayoffHome")
+  playoffAwayMatches PlayoffMatch[] @relation("PlayoffAway")
 
   @@index([tournamentId])
 }
@@ -208,6 +210,33 @@ model Match {
   @@index([homeTeamId])
   @@index([awayTeamId])
   @@index([status])
+}
+
+model PlayoffMatch {
+  id              String      @id @default(cuid())
+  tournamentId    String
+  tournament      Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round           Int
+  sequence        Int
+  homeTeamId      String?
+  awayTeamId      String?
+  homeTeam        Team?       @relation("PlayoffHome", fields: [homeTeamId], references: [id])
+  awayTeam        Team?       @relation("PlayoffAway", fields: [awayTeamId], references: [id])
+  homeSlot        String
+  awaySlot        String
+  homeFromMatchId String?
+  homeFromResult  String?
+  awayFromMatchId String?
+  awayFromResult  String?
+  status          MatchStatus @default(UPCOMING)
+  homeScore       Int?
+  awayScore       Int?
+  winnerId        String?
+  completedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([tournamentId])
 }
 
 model Invitation {
