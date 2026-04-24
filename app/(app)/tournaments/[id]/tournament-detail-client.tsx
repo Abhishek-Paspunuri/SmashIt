@@ -1996,7 +1996,7 @@ function CompletePlayoffMatchModal({
               <div className="flex items-center gap-1.5 flex-wrap">
                 {team.members.map(
                   (m: {
-                    player: { id: string; name: string; avatarUrl?: string };
+                    player: { id: string; name: string; avatarUrl: string | null };
                   }) => (
                     <Avatar
                       key={m.player.id}
