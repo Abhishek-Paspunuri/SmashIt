@@ -21,11 +21,36 @@ export default async function OrganisationPage() {
     take: 10,
   });
 
+  // Orgs I've joined as a linked player (bidirectional)
+  const linkedPlayers = await prisma.player.findMany({
+    where: { userId: user.id, deletedAt: null, NOT: { ownerId: user.id } },
+    include: {
+      owner: {
+        select: {
+          id: true, name: true, orgName: true, email: true, avatarUrl: true,
+        },
+      },
+      groupMembers: {
+        include: { group: { select: { id: true, name: true } } },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const joinedOrgs = linkedPlayers.map((p) => ({
+    ownerId: p.owner.id,
+    ownerName: p.owner.orgName ?? p.owner.name ?? p.owner.email.split("@")[0],
+    ownerEmail: p.owner.email,
+    ownerAvatar: p.owner.avatarUrl,
+    groups: p.groupMembers.map((gm) => gm.group),
+  }));
+
   return (
     <OrganisationClient
       user={{ id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl }}
       players={players}
       invitations={invitations}
+      joinedOrgs={joinedOrgs}
     />
   );
 }

@@ -269,17 +269,17 @@ export function TournamentDetailClient({
   const completed = tournament.matches.filter((m) => m.status === "COMPLETED");
 
   return (
-    <div className="max-w-2xl mx-auto px-3 py-5 pb-2">
+    <div className="max-w-2xl mx-auto px-3 pt-4 pb-4 flex flex-col h-[calc(100dvh-56px-80px)] sm:h-dvh sm:pb-6">
       {/* Back */}
       <Link
         href="/tournaments"
-        className="inline-flex items-center gap-1 text-sm text-[var(--color-muted)] hover:text-orange-500 mb-4"
+        className="inline-flex items-center gap-1 text-sm text-[var(--color-muted)] hover:text-orange-500 mb-3 shrink-0"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> Tournaments
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-4">
+      <div className="flex items-start justify-between gap-3 mb-3 shrink-0">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-bold text-[var(--color-foreground)] truncate">
@@ -323,10 +323,7 @@ export function TournamentDetailClient({
       </div>
 
       {/* Tabs + scrollable content box */}
-      <div
-        className="rounded-2xl border border-border bg-surface-3 overflow-hidden flex flex-col sm:mb-4"
-        style={{ maxHeight: "calc(100dvh - 280px)" }}
-      >
+      <div className="rounded-2xl border border-border bg-surface-3 overflow-hidden flex flex-col flex-1 min-h-0">
         {/* Tab bar */}
         <div className="flex border-b border-border shrink-0">
           {(["matches", "scoreboard", "teams", "playoffs"] as Tab[]).map(

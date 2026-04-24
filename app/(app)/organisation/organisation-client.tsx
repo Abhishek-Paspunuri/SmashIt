@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/toast";
 import { Modal } from "@/components/ui/modal";
 import {
   Copy, Check, Link2, Users, Mail, UserPlus, LogIn,
-  Clock, CheckCircle2, ArrowLeft,
+  Clock, CheckCircle2, ArrowLeft, Building2, FolderOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -36,13 +36,22 @@ interface OrgInvitation {
   acceptedAt: Date | null;
 }
 
+interface JoinedOrg {
+  ownerId: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerAvatar: string | null;
+  groups: { id: string; name: string }[];
+}
+
 interface OrganisationClientProps {
   user: { id: string; name: string | null; email: string; avatarUrl: string | null };
   players: OrgPlayer[];
   invitations: OrgInvitation[];
+  joinedOrgs: JoinedOrg[];
 }
 
-export function OrganisationClient({ user, players, invitations }: OrganisationClientProps) {
+export function OrganisationClient({ user, players, invitations, joinedOrgs }: OrganisationClientProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"invite" | "join">("invite");
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -255,7 +264,7 @@ export function OrganisationClient({ user, players, invitations }: OrganisationC
         </Card>
       )}
 
-      {/* Members */}
+      {/* My Players */}
       <Card>
         <CardHeader>
           <CardTitle>
@@ -286,6 +295,49 @@ export function OrganisationClient({ user, players, invitations }: OrganisationC
           </div>
         )}
       </Card>
+
+      {/* Orgs I've joined */}
+      {joinedOrgs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <span className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-orange-500" />
+                Orgs I've Joined ({joinedOrgs.length})
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <div className="space-y-3">
+            {joinedOrgs.map((org) => (
+              <div key={org.ownerId} className="rounded-xl border border-[var(--color-border)] p-3 space-y-2">
+                <div className="flex items-center gap-3">
+                  <Avatar name={org.ownerName} src={org.ownerAvatar} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[var(--color-foreground)] truncate">
+                      {org.ownerName}
+                    </p>
+                    <p className="text-xs text-[var(--color-muted)] truncate">{org.ownerEmail}</p>
+                  </div>
+                  <Badge variant="info" className="text-[10px] shrink-0">Member</Badge>
+                </div>
+                {org.groups.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {org.groups.map((g) => (
+                      <span
+                        key={g.id}
+                        className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--color-surface-3)] text-[var(--color-muted)]"
+                      >
+                        <FolderOpen className="h-2.5 w-2.5" />
+                        {g.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

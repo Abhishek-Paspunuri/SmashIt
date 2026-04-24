@@ -1,22 +1,29 @@
 import { prisma } from "@/lib/prisma";
 import { generateRoundRobin } from "@/lib/utils/round-robin";
+import { getAccessibleOrgIds, canManageTournament } from "@/lib/services/permissions";
 import type { TournamentStatus, TournamentFormat } from "@prisma/client";
 
-export async function getTournaments(ownerId: string) {
+export async function getTournaments(userId: string) {
+  const orgIds = await getAccessibleOrgIds(userId);
   return prisma.tournament.findMany({
-    where: { ownerId, deletedAt: null },
+    where: { ownerId: { in: orgIds }, deletedAt: null },
     include: {
       _count: { select: { matches: true, teams: true, participants: true } },
       sourceGroup: true,
+      owner: { select: { id: true, name: true, orgName: true, email: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function getTournament(id: string, ownerId: string) {
+export async function getTournament(id: string, userId: string) {
+  const access = await canManageTournament(id, userId);
+  if (!access) return null;
+
   return prisma.tournament.findFirst({
-    where: { id, ownerId, deletedAt: null },
+    where: { id, deletedAt: null },
     include: {
+      owner: { select: { id: true, name: true, orgName: true, email: true } },
       participants: { include: { player: true } },
       teams: {
         include: {
@@ -81,11 +88,14 @@ export async function createTournament(ownerId: string, input: CreateTournamentI
 
 export async function updateTournamentStatus(
   id: string,
-  ownerId: string,
+  userId: string,
   status: TournamentStatus
 ) {
+  const access = await canManageTournament(id, userId);
+  if (!access) throw new Error("Tournament not found");
+
   const tournament = await prisma.tournament.findFirst({
-    where: { id, ownerId, deletedAt: null },
+    where: { id, deletedAt: null },
     include: { teams: true, matches: true },
   });
   if (!tournament) throw new Error("Tournament not found");
@@ -113,9 +123,14 @@ export async function updateTournamentStatus(
   return prisma.tournament.findUnique({ where: { id } });
 }
 
-export async function deleteTournament(id: string, ownerId: string) {
-  return prisma.tournament.updateMany({
-    where: { id, ownerId, deletedAt: null },
+export async function deleteTournament(id: string, userId: string) {
+  // Only the actual owner can delete a tournament
+  const tournament = await prisma.tournament.findFirst({
+    where: { id, ownerId: userId, deletedAt: null },
+  });
+  if (!tournament) throw new Error("Tournament not found or only the owner can delete");
+  return prisma.tournament.update({
+    where: { id },
     data: { deletedAt: new Date() },
   });
 }

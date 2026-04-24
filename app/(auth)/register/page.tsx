@@ -4,12 +4,15 @@ export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "/dashboard";
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,12 +26,13 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     const supabase = createClient();
+    const callbackUrl = `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(next)}`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: name },
-        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        emailRedirectTo: callbackUrl,
       },
     });
     if (error) {
@@ -43,9 +47,10 @@ export default function RegisterPage() {
   async function handleGoogleLogin() {
     setGoogleLoading(true);
     const supabase = createClient();
+    const callbackUrl = `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(next)}`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+      options: { redirectTo: callbackUrl },
     });
     if (error) {
       setError(error.message);
@@ -78,7 +83,8 @@ export default function RegisterPage() {
           <p className="text-sm text-[#888] max-w-xs mx-auto">
             We sent a confirmation link to{" "}
             <strong className="text-white">{email}</strong>.
-            Click it to activate your account.
+            Click it to activate your account
+            {next !== "/dashboard" ? " — you'll be taken straight to the invite after confirming." : "."}
           </p>
           <Link
             href="/login"
@@ -208,7 +214,10 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-[#666] mt-5">
             Already have an account?{" "}
-            <Link href="/login" className="text-orange-400 font-semibold hover:text-orange-300 transition-colors">
+            <Link
+              href={next !== "/dashboard" ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+              className="text-orange-400 font-semibold hover:text-orange-300 transition-colors"
+            >
               Sign In
             </Link>
           </p>

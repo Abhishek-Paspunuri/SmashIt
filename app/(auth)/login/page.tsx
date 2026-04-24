@@ -4,12 +4,15 @@ export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "/dashboard";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,7 +32,7 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push("/dashboard");
+      router.push(next);
       router.refresh();
     }
   }
@@ -38,9 +41,10 @@ export default function LoginPage() {
     setGoogleLoading(true);
     setError(null);
     const supabase = createClient();
+    const callbackUrl = `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(next)}`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+      options: { redirectTo: callbackUrl },
     });
     if (error) {
       setError(error.message);
@@ -211,7 +215,7 @@ export default function LoginPage() {
           <p className="text-center text-sm text-[#666] mt-5">
             Don&apos;t have an account?{" "}
             <Link
-              href="/register"
+              href={next !== "/dashboard" ? `/register?next=${encodeURIComponent(next)}` : "/register"}
               className="text-orange-400 font-semibold hover:text-orange-300 transition-colors"
             >
               Create one

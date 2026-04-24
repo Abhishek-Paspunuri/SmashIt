@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { canManageTournament } from "@/lib/services/permissions";
 
 export async function getMatch(id: string) {
   return prisma.match.findUnique({
@@ -11,11 +12,15 @@ export async function getMatch(id: string) {
   });
 }
 
-export async function startMatch(id: string, ownerId: string) {
+export async function startMatch(id: string, userId: string) {
   const match = await prisma.match.findFirst({
-    where: { id, tournament: { ownerId }, status: "UPCOMING" },
+    where: { id, status: "UPCOMING" },
+    select: { id: true, tournamentId: true },
   });
   if (!match) throw new Error("Match not found or already started");
+
+  const access = await canManageTournament(match.tournamentId, userId);
+  if (!access) throw new Error("Match not found or already started");
 
   return prisma.match.update({
     where: { id },
@@ -29,15 +34,14 @@ export interface CompleteMatchInput {
   awayScore: number;
 }
 
-export async function completeMatch(id: string, ownerId: string, input: CompleteMatchInput) {
+export async function completeMatch(id: string, userId: string, input: CompleteMatchInput) {
   const match = await prisma.match.findFirst({
-    where: {
-      id,
-      tournament: { ownerId },
-      status: { in: ["UPCOMING", "LIVE"] },
-    },
+    where: { id, status: { in: ["UPCOMING", "LIVE"] } },
   });
   if (!match) throw new Error("Match not found");
+
+  const access = await canManageTournament(match.tournamentId, userId);
+  if (!access) throw new Error("Match not found");
 
   // Validate: winner must be home or away team
   if (input.winnerId !== match.homeTeamId && input.winnerId !== match.awayTeamId) {
@@ -56,10 +60,10 @@ export async function completeMatch(id: string, ownerId: string, input: Complete
     },
   });
 
-  // Log activity
+  // Log activity (userId = who performed the action, may differ from tournament owner)
   await prisma.activityLog.create({
     data: {
-      userId: ownerId,
+      userId,
       action: "MATCH_COMPLETED",
       entityType: "Match",
       entityId: id,
@@ -70,11 +74,14 @@ export async function completeMatch(id: string, ownerId: string, input: Complete
   return updated;
 }
 
-export async function updateMatch(id: string, ownerId: string, input: CompleteMatchInput) {
+export async function updateMatch(id: string, userId: string, input: CompleteMatchInput) {
   const match = await prisma.match.findFirst({
-    where: { id, tournament: { ownerId }, status: "COMPLETED" },
+    where: { id, status: "COMPLETED" },
   });
   if (!match) throw new Error("Match not found or not completed");
+
+  const access = await canManageTournament(match.tournamentId, userId);
+  if (!access) throw new Error("Match not found or not completed");
 
   if (input.winnerId !== match.homeTeamId && input.winnerId !== match.awayTeamId) {
     throw new Error("Invalid winner");

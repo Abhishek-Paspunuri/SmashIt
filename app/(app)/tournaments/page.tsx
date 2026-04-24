@@ -7,5 +7,5 @@ export const dynamic = "force-dynamic";
 export default async function TournamentsPage() {
   const user = await requireUser();
   const tournaments = await getTournaments(user.id);
-  return <TournamentsClient initialTournaments={tournaments} />;
+  return <TournamentsClient initialTournaments={tournaments} currentUserId={user.id} />;
 }

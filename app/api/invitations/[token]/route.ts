@@ -43,13 +43,30 @@ export async function POST(_req: Request, { params }: { params: Promise<{ token:
   });
 
   if (!existingPlayer) {
-    // Add them as a player in the inviter's org
+    // 1. Add the accepted user as a player in the inviter's org
     await prisma.player.create({
       data: {
         name: user.name ?? user.email.split("@")[0],
         email: user.email,
         ownerId: invite.invitedById,
         userId: user.id,
+        status: "ACTIVE",
+      },
+    });
+  }
+
+  // 2. Bidirectional: add the inviter as a player in the accepted user's org (if not already there)
+  const inversePlayer = await prisma.player.findFirst({
+    where: { ownerId: user.id, userId: invite.invitedById },
+  });
+
+  if (!inversePlayer) {
+    await prisma.player.create({
+      data: {
+        name: invite.invitedBy.name ?? invite.invitedBy.email.split("@")[0],
+        email: invite.invitedBy.email,
+        ownerId: user.id,
+        userId: invite.invitedById,
         status: "ACTIVE",
       },
     });
