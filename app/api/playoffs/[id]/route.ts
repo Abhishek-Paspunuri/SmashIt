@@ -29,8 +29,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-    await completePlayoffMatch(id, parsed.data.winnerId, parsed.data.homeScore, parsed.data.awayScore);
-    return NextResponse.json({ data: { success: true } });
+    const result = await completePlayoffMatch(id, parsed.data.winnerId, parsed.data.homeScore, parsed.data.awayScore);
+    return NextResponse.json({ data: { success: true, ...result } });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }

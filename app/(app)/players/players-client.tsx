@@ -165,6 +165,13 @@ export function PlayersClient({ initialPlayers }: PlayersClientProps) {
         )
       ) : (
         <div className="space-y-2">
+          {/* Invisible backdrop to close menu on outside tap */}
+          {menuPlayerId && (
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => setMenuPlayerId(null)}
+            />
+          )}
           {filtered.map((player) => (
             <PlayerCard
               key={player.id}
@@ -223,11 +230,15 @@ function PlayerCard({
       <button onClick={onViewProfile} className="flex items-center gap-3 flex-1 min-w-0 text-left">
         <Avatar name={player.name} src={player.avatarUrl} size="md" />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm text-[var(--color-foreground)] truncate">
               {player.name}
             </span>
-            <PlayerStatusBadge status={player.status} />
+            {player.userId ? (
+              <Badge variant="info">Joined via invite</Badge>
+            ) : (
+              <PlayerStatusBadge status={player.status} />
+            )}
           </div>
           <div className="flex items-center gap-3 mt-0.5">
             {player.email && (

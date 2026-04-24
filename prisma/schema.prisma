@@ -131,11 +131,12 @@ model Tournament {
   sourceGroup   Group?           @relation("TournamentGroup", fields: [sourceGroupId], references: [id])
   ownerId       String
   owner         User             @relation(fields: [ownerId], references: [id])
-  startDate     DateTime?
-  endDate       DateTime?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?
+  startDate       DateTime?
+  endDate         DateTime?
+  winnerTeamName  String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
 
   participants    TournamentParticipant[]
   teams           Team[]

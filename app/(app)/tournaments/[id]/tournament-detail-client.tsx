@@ -59,6 +59,7 @@ export function TournamentDetailClient({
   // Playoffs state
   const [playoffs, setPlayoffs] = useState<PlayoffMatchWithTeams[]>([]);
   const [playoffsLoaded, setPlayoffsLoaded] = useState(false);
+  const [playoffsLoading, setPlayoffsLoading] = useState(false);
   const [topN, setTopN] = useState(4);
   const [completePlayoffMatch, setCompletePlayoffMatch] =
     useState<PlayoffMatchWithTeams | null>(null);
@@ -205,6 +206,7 @@ export function TournamentDetailClient({
   async function handleTabChange(t: Tab) {
     setTab(t);
     if (t === "playoffs" && !playoffsLoaded) {
+      setPlayoffsLoading(true);
       try {
         const res = await fetch(`/api/tournaments/${tournament.id}/playoffs`);
         if (res.ok) {
@@ -215,6 +217,7 @@ export function TournamentDetailClient({
         // ignore
       } finally {
         setPlayoffsLoaded(true);
+        setPlayoffsLoading(false);
       }
     }
   }
@@ -247,10 +250,9 @@ export function TournamentDetailClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ winnerId, homeScore, awayScore }),
       });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error || "Failed");
-      }
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed");
+
       // Refresh playoffs
       const pRes = await fetch(`/api/tournaments/${tournament.id}/playoffs`);
       if (pRes.ok) {
@@ -258,7 +260,21 @@ export function TournamentDetailClient({
         setPlayoffs(pJson.data);
       }
       setCompletePlayoffMatch(null);
-      toast("Match completed!", "success");
+
+      // Auto-complete: grand final done
+      if (json.data?.tournamentCompleted) {
+        setTournament((prev) => ({
+          ...prev,
+          status: "COMPLETED" as const,
+          winnerTeamName: json.data.winnerTeamName ?? null,
+        }));
+        toast(
+          `🏆 ${json.data.winnerTeamName ?? "Team"} wins the tournament!`,
+          "success",
+        );
+      } else {
+        toast("Match completed!", "success");
+      }
     } catch (e) {
       toast((e as Error).message, "error");
     }
@@ -402,16 +418,33 @@ export function TournamentDetailClient({
           {tab === "teams" && <TeamsTab teams={tournament.teams} />}
 
           {/* Tab: Playoffs */}
-          {tab === "playoffs" && (
-            <PlayoffsTab
-              playoffs={playoffs}
-              allMatchesDone={allMatchesDone}
-              topN={topN}
-              onTopNChange={setTopN}
-              onCreatePlayoffs={handleCreatePlayoffs}
-              onCompleteMatch={(m) => setCompletePlayoffMatch(m)}
-            />
-          )}
+          {tab === "playoffs" &&
+            (playoffsLoading ? (
+              <div className="space-y-3 animate-pulse">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-border bg-surface p-3 flex items-center gap-3"
+                  >
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-1/2 bg-surface-3 rounded-md" />
+                      <div className="h-3 w-1/3 bg-surface-3 rounded-md" />
+                    </div>
+                    <div className="h-4 w-10 bg-surface-3 rounded-md" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <PlayoffsTab
+                playoffs={playoffs}
+                allMatchesDone={allMatchesDone}
+                teamCount={tournament.teams.length}
+                topN={topN}
+                onTopNChange={setTopN}
+                onCreatePlayoffs={handleCreatePlayoffs}
+                onCompleteMatch={(m) => setCompletePlayoffMatch(m)}
+              />
+            ))}
         </div>
       </div>
 
@@ -569,10 +602,11 @@ function MatchCard({
   onEdit,
 }: {
   match: MatchWithTeams;
-  onStart?: () => void;
+  onStart?: () => Promise<void> | void;
   onComplete?: () => void;
   onEdit?: () => void;
 }) {
+  const [starting, setStarting] = useState(false);
   const isLive = match.status === "LIVE";
   const isDone = match.status === "COMPLETED";
 
@@ -732,8 +766,20 @@ function MatchCard({
 
           {/* Actions */}
           {onStart && (
-            <Button size="sm" variant="primary" onClick={onStart}>
-              <Play className="h-3.5 w-3.5" />
+            <Button
+              size="sm"
+              variant="primary"
+              loading={starting}
+              onClick={async () => {
+                setStarting(true);
+                try {
+                  await onStart();
+                } finally {
+                  setStarting(false);
+                }
+              }}
+            >
+              {!starting && <Play className="h-3.5 w-3.5" />}
             </Button>
           )}
           {onComplete && (
@@ -1083,6 +1129,326 @@ function ScoreboardTab({ standings }: { standings: RankedTeam[] }) {
 }
 
 // ── Playoffs Tab ─────────────────────────────────────────────────────────────
+
+function Bracket2Svg() {
+  return (
+    <svg
+      width="200"
+      height="100"
+      viewBox="0 0 200 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="mx-auto"
+    >
+      {/* T1 box */}
+      <rect
+        x="16"
+        y="30"
+        width="60"
+        height="28"
+        rx="5"
+        fill="var(--color-surface)"
+        stroke="#f97316"
+        strokeOpacity="0.4"
+      />
+      <text
+        x="46"
+        y="48"
+        textAnchor="middle"
+        fill="currentColor"
+        fontSize="10"
+        opacity="0.7"
+      >
+        T1
+      </text>
+      {/* T2 box */}
+      <rect
+        x="124"
+        y="30"
+        width="60"
+        height="28"
+        rx="5"
+        fill="var(--color-surface)"
+        stroke="#f97316"
+        strokeOpacity="0.4"
+      />
+      <text
+        x="154"
+        y="48"
+        textAnchor="middle"
+        fill="currentColor"
+        fontSize="10"
+        opacity="0.7"
+      >
+        T2
+      </text>
+      {/* Connector lines */}
+      <line
+        x1="76"
+        y1="44"
+        x2="100"
+        y2="44"
+        stroke="#f97316"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
+      />
+      <line
+        x1="124"
+        y1="44"
+        x2="100"
+        y2="44"
+        stroke="#f97316"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
+      />
+      {/* Grand Final label */}
+      <text
+        x="100"
+        y="20"
+        textAnchor="middle"
+        fill="#f97316"
+        fontSize="8"
+        fontWeight="bold"
+      >
+        GRAND FINAL
+      </text>
+      <line
+        x1="100"
+        y1="22"
+        x2="100"
+        y2="44"
+        stroke="#f97316"
+        strokeOpacity="0.3"
+        strokeWidth="1"
+        strokeDasharray="3 2"
+      />
+    </svg>
+  );
+}
+
+function Bracket3Svg() {
+  return (
+    <svg
+      width="280"
+      height="160"
+      viewBox="0 0 280 160"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="mx-auto"
+    >
+      {/* Eliminator: T2 vs T3 */}
+      <rect
+        x="8"
+        y="100"
+        width="60"
+        height="26"
+        rx="5"
+        fill="var(--color-surface)"
+        stroke="#ef4444"
+        strokeOpacity="0.5"
+      />
+      <text
+        x="38"
+        y="117"
+        textAnchor="middle"
+        fill="currentColor"
+        fontSize="10"
+        opacity="0.7"
+      >
+        T2
+      </text>
+      <rect
+        x="8"
+        y="130"
+        width="60"
+        height="26"
+        rx="5"
+        fill="var(--color-surface)"
+        stroke="#ef4444"
+        strokeOpacity="0.5"
+      />
+      <text
+        x="38"
+        y="147"
+        textAnchor="middle"
+        fill="currentColor"
+        fontSize="10"
+        opacity="0.7"
+      >
+        T3
+      </text>
+      {/* Eliminator label */}
+      <text
+        x="38"
+        y="92"
+        textAnchor="middle"
+        fill="#ef4444"
+        fontSize="7.5"
+        fontWeight="bold"
+      >
+        ELIMINATOR
+      </text>
+      {/* Lines from Eliminator to Final */}
+      <line
+        x1="68"
+        y1="113"
+        x2="90"
+        y2="113"
+        stroke="#f97316"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
+      />
+      <line
+        x1="68"
+        y1="143"
+        x2="90"
+        y2="143"
+        stroke="#f97316"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
+      />
+      <line
+        x1="90"
+        y1="113"
+        x2="90"
+        y2="143"
+        stroke="#f97316"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
+      />
+      <line
+        x1="90"
+        y1="128"
+        x2="110"
+        y2="128"
+        stroke="#f97316"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
+      />
+      {/* Grand Final box */}
+      <rect
+        x="110"
+        y="58"
+        width="68"
+        height="26"
+        rx="5"
+        fill="var(--color-surface)"
+        stroke="#f97316"
+        strokeOpacity="0.6"
+      />
+      <text
+        x="144"
+        y="75"
+        textAnchor="middle"
+        fill="currentColor"
+        fontSize="10"
+        opacity="0.7"
+      >
+        T1
+      </text>
+      <rect
+        x="110"
+        y="100"
+        width="68"
+        height="26"
+        rx="5"
+        fill="var(--color-surface)"
+        stroke="#f97316"
+        strokeOpacity="0.4"
+      />
+      <text
+        x="144"
+        y="117"
+        textAnchor="middle"
+        fill="#f97316"
+        fontSize="9"
+        opacity="0.8"
+      >
+        W: Elim
+      </text>
+      {/* Connector to winner box */}
+      <line
+        x1="178"
+        y1="71"
+        x2="200"
+        y2="71"
+        stroke="#f97316"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
+      />
+      <line
+        x1="178"
+        y1="113"
+        x2="200"
+        y2="113"
+        stroke="#f97316"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
+      />
+      <line
+        x1="200"
+        y1="71"
+        x2="200"
+        y2="113"
+        stroke="#f97316"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
+      />
+      <line
+        x1="200"
+        y1="92"
+        x2="220"
+        y2="92"
+        stroke="#f97316"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
+      />
+      {/* Winner box */}
+      <rect
+        x="220"
+        y="78"
+        width="52"
+        height="28"
+        rx="5"
+        fill="var(--color-surface)"
+        stroke="#f97316"
+        strokeOpacity="0.7"
+      />
+      <text
+        x="246"
+        y="96"
+        textAnchor="middle"
+        fill="#f97316"
+        fontSize="9"
+        fontWeight="bold"
+      >
+        🏆
+      </text>
+      {/* Grand Final label */}
+      <text
+        x="144"
+        y="48"
+        textAnchor="middle"
+        fill="#f97316"
+        fontSize="8"
+        fontWeight="bold"
+      >
+        GRAND FINAL
+      </text>
+      {/* T1 Bye label */}
+      <text
+        x="144"
+        y="92"
+        textAnchor="middle"
+        fill="#f97316"
+        fontSize="7"
+        opacity="0.5"
+      >
+        ← Bye (1st)
+      </text>
+    </svg>
+  );
+}
 
 function Bracket4Svg() {
   return (
@@ -1713,6 +2079,7 @@ function Bracket6Svg() {
 function PlayoffsTab({
   playoffs,
   allMatchesDone,
+  teamCount,
   topN,
   onTopNChange,
   onCreatePlayoffs,
@@ -1720,6 +2087,7 @@ function PlayoffsTab({
 }: {
   playoffs: PlayoffMatchWithTeams[];
   allMatchesDone: boolean;
+  teamCount: number;
   topN: number;
   onTopNChange: (n: number) => void;
   onCreatePlayoffs: (n: number) => Promise<void>;
@@ -1736,10 +2104,29 @@ function PlayoffsTab({
   );
 
   const roundLabels: Record<number, string> = {
-    1: "Round 1",
-    2: playoffs.length <= 4 ? "Lower Final" : "Semi-Finals",
+    1: playoffs.length === 2 ? "Eliminator" : "Opening Round",
+    2: "Knockout",
     3: "Grand Final",
   };
+
+  // Per-match IPL-style label
+  function getMatchLabel(m: PlayoffMatchWithTeams): string {
+    if (m.round === 3) return "Grand Final";
+    const total = playoffs.length;
+    if (total === 2) return "Eliminator"; // 3-team: only one round-1 match before final
+    if (total <= 4) {
+      if (m.round === 1 && m.sequence === 1) return "Qualifier 1";
+      if (m.round === 1 && m.sequence === 2) return "Eliminator";
+      if (m.round === 2) return "Qualifier 2";
+    } else {
+      if (m.round === 1 && m.sequence === 1) return "Qualifier 1";
+      if (m.round === 1 && m.sequence === 2) return "Qualifier 2";
+      if (m.round === 1 && m.sequence === 3) return "Eliminator 1";
+      if (m.round === 2 && m.sequence === 1) return "Eliminator 2";
+      if (m.round === 2 && m.sequence === 2) return "Qualifier 3";
+    }
+    return `Round ${m.round}`;
+  }
 
   if (playoffs.length === 0) {
     return (
@@ -1749,12 +2136,20 @@ function PlayoffsTab({
           matches are done.
         </p>
 
-        {topN >= 6 ? <Bracket6Svg /> : <Bracket4Svg />}
+        {topN >= 6 ? (
+          <Bracket6Svg />
+        ) : topN >= 4 ? (
+          <Bracket4Svg />
+        ) : topN === 3 ? (
+          <Bracket3Svg />
+        ) : (
+          <Bracket2Svg />
+        )}
         <div>
           <p className="text-xs text-muted text-center font-medium">
             Select how many top-ranked teams advance to the playoffs.
           </p>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 mt-3">
             <label className="text-xs text-muted">Top teams:</label>
             <div className="relative">
               <select
@@ -1762,6 +2157,8 @@ function PlayoffsTab({
                 onChange={(e) => onTopNChange(Number(e.target.value))}
                 className="appearance-none text-sm font-medium bg-surface-3 border border-border rounded-lg px-3 py-1.5 pr-7 text-foreground focus:outline-none focus:ring-1 focus:ring-orange-500"
               >
+                <option value={2}>2</option>
+                <option value={3}>3</option>
                 <option value={4}>4</option>
                 <option value={5}>5</option>
                 <option value={6}>6</option>
@@ -1771,7 +2168,13 @@ function PlayoffsTab({
           </div>
         </div>
 
-        {!allMatchesDone && (
+        {topN > teamCount && (
+          <p className="text-xs text-red-200 text-center">
+            Only {teamCount} team{teamCount !== 1 ? "s" : ""} in this
+            tournament. Select {teamCount} or fewer.
+          </p>
+        )}
+        {!allMatchesDone && topN <= teamCount && (
           <p className="text-xs text-orange-400 text-center">
             Complete all tournament matches first.
           </p>
@@ -1779,7 +2182,7 @@ function PlayoffsTab({
 
         <Button
           className="w-full"
-          disabled={!allMatchesDone}
+          disabled={!allMatchesDone || topN > teamCount}
           loading={creating}
           onClick={async () => {
             setCreating(true);
@@ -1806,6 +2209,7 @@ function PlayoffsTab({
               <PlayoffMatchCard
                 key={m.id}
                 match={m}
+                label={getMatchLabel(m)}
                 onComplete={
                   m.status !== "COMPLETED" && m.homeTeamId && m.awayTeamId
                     ? () => onCompleteMatch(m)
@@ -1822,21 +2226,62 @@ function PlayoffsTab({
 
 function PlayoffMatchCard({
   match,
+  label,
   onComplete,
 }: {
   match: PlayoffMatchWithTeams;
+  label?: string;
   onComplete?: () => void;
 }) {
   const isDone = match.status === "COMPLETED";
   const hasBothTeams = !!match.homeTeamId && !!match.awayTeamId;
   const homeWon = isDone && match.winnerId === match.homeTeamId;
   const awayWon = isDone && match.winnerId === match.awayTeamId;
+  const isGrandFinal = label === "Grand Final";
+  const isEliminator = label?.startsWith("Eliminator");
 
   const homeName = match.homeTeam?.name ?? match.homeSlot;
   const awayName = match.awayTeam?.name ?? match.awaySlot;
 
   return (
     <Card padded={false} className="overflow-hidden">
+      {/* Label bar at top */}
+      {label && (
+        <div
+          className={cn(
+            "px-3 py-1 flex items-center gap-1.5",
+            isGrandFinal
+              ? "bg-gradient-to-r from-purple-900/40 to-purple-800/20 border-b border-purple-500/20"
+              : isEliminator
+                ? "bg-red-500/5 border-b border-red-500/15"
+                : "bg-surface-3 border-b border-border",
+          )}
+        >
+          <span
+            className={cn(
+              "text-[10px] font-bold uppercase tracking-widest",
+              isGrandFinal
+                ? "text-purple-400"
+                : isEliminator
+                  ? "text-red-400"
+                  : "text-orange-400",
+            )}
+          >
+            {isGrandFinal && "🏆 "}
+            {label}
+          </span>
+          {isEliminator && (
+            <span className="text-[9px] text-red-400/70 ml-auto">
+              Loser is out
+            </span>
+          )}
+          {!isEliminator && !isGrandFinal && label?.startsWith("Qualifier") && (
+            <span className="text-[9px] text-muted ml-auto">
+              Loser gets 2nd chance
+            </span>
+          )}
+        </div>
+      )}
       {isDone && (
         <div
           className={cn(
@@ -1993,7 +2438,11 @@ function CompletePlayoffMatchModal({
               <div className="flex items-center gap-1.5 flex-wrap">
                 {team.members.map(
                   (m: {
-                    player: { id: string; name: string; avatarUrl: string | null };
+                    player: {
+                      id: string;
+                      name: string;
+                      avatarUrl: string | null;
+                    };
                   }) => (
                     <Avatar
                       key={m.player.id}
@@ -2097,8 +2546,8 @@ function CompletePlayoffMatchModal({
         )}
 
         {winnerId && !validGap && (
-          <p className="text-xs text-red-500 text-center -mb-1">
-            Winning score must be at least 2 points ahead.
+          <p className="text-xs text-red-500 text-center px-3 py-2 rounded-lg bg-red-500/10 leading-relaxed">
+            Winning score must be at least 2 points ahead of the losing score.
           </p>
         )}
 

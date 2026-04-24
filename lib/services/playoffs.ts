@@ -22,12 +22,20 @@ function ordinal(n: number) {
 }
 
 export function buildBracketDrafts(n: number, teamIds: string[]): MatchDraft[] {
-  const effective = n >= 6 ? 6 : 4;
+  const effective = n >= 6 ? 6 : n >= 4 ? 4 : n === 3 ? 3 : 2;
   const ids = teamIds.slice(0, effective);
 
   const draft: MatchDraft[] = [];
 
-  if (effective === 4) {
+  if (effective === 2) {
+    // Direct Grand Final
+    draft.push({ index: 0, round: 3, sequence: 1, homeTeamId: ids[0], homeSlot: ordinal(1) + " Place", homeFromIndex: null, homeFromResult: null, awayTeamId: ids[1], awaySlot: ordinal(2) + " Place", awayFromIndex: null, awayFromResult: null });
+  } else if (effective === 3) {
+    // M0: T2 vs T3 (Eliminator — loser out, T1 has bye)
+    draft.push({ index: 0, round: 1, sequence: 1, homeTeamId: ids[1], homeSlot: ordinal(2) + " Place", homeFromIndex: null, homeFromResult: null, awayTeamId: ids[2], awaySlot: ordinal(3) + " Place", awayFromIndex: null, awayFromResult: null });
+    // M1: T1 vs W(M0) — Grand Final
+    draft.push({ index: 1, round: 3, sequence: 1, homeTeamId: ids[0], homeSlot: ordinal(1) + " Place", homeFromIndex: null, homeFromResult: null, awayTeamId: null, awaySlot: "W: Eliminator", awayFromIndex: 0, awayFromResult: "winner" });
+  } else if (effective === 4) {
     // M0: T1 vs T2
     draft.push({ index: 0, round: 1, sequence: 1, homeTeamId: ids[0], homeSlot: ordinal(1) + " Place", homeFromIndex: null, homeFromResult: null, awayTeamId: ids[1], awaySlot: ordinal(2) + " Place", awayFromIndex: null, awayFromResult: null });
     // M1: T3 vs T4
@@ -68,10 +76,10 @@ export async function createPlayoffs(tournamentId: string, topN: number) {
 
   // Get seeded teams
   const standings = await getStandings(tournamentId);
-  const effective = topN >= 6 ? 6 : topN >= 5 ? 4 : Math.max(4, Math.min(topN, 4));
+  const effective = topN >= 6 ? 6 : topN >= 4 ? 4 : topN === 3 ? 3 : 2;
   const seededIds = standings.slice(0, effective).map((s) => s.teamId);
 
-  if (seededIds.length < 4) throw new Error("Not enough teams");
+  if (seededIds.length < effective) throw new Error("Not enough teams to generate this bracket");
 
   const drafts = buildBracketDrafts(topN, seededIds);
 
@@ -129,7 +137,7 @@ export async function completePlayoffMatch(
   winnerId: string,
   homeScore: number,
   awayScore: number
-) {
+): Promise<{ tournamentCompleted: boolean; winnerTeamName: string | null }> {
   const match = await prisma.playoffMatch.findUnique({ where: { id: matchId } });
   if (!match) throw new Error("Match not found");
   if (!match.homeTeamId || !match.awayTeamId) throw new Error("Teams not yet determined");
@@ -159,4 +167,20 @@ export async function completePlayoffMatch(
     }
     await prisma.playoffMatch.update({ where: { id: dep.id }, data: updates });
   }
+
+  // Auto-complete tournament if this was the Grand Final (round 3)
+  if (match.round === 3) {
+    const winnerTeam = await prisma.team.findUnique({
+      where: { id: winnerId },
+      select: { name: true },
+    });
+    const winnerTeamName = winnerTeam?.name ?? null;
+    await prisma.tournament.update({
+      where: { id: match.tournamentId },
+      data: { status: "COMPLETED", winnerTeamName },
+    });
+    return { tournamentCompleted: true, winnerTeamName };
+  }
+
+  return { tournamentCompleted: false, winnerTeamName: null };
 }
