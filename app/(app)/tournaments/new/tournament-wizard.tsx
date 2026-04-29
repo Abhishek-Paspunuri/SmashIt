@@ -34,7 +34,10 @@ import {
 import { cn } from "@/lib/utils";
 import type { Player, Group } from "@prisma/client";
 
-type GroupWithCount = Group & { _count: { members: number } };
+type GroupWithCount = Group & {
+  _count: { members: number };
+  members: { playerId: string }[];
+};
 
 interface TournamentWizardProps {
   players: Player[];
@@ -79,7 +82,9 @@ export function TournamentWizard({
   const [sourceGroupId, setSourceGroupId] = useState<string | undefined>(
     defaultGroupId,
   );
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(defaultPlayerIds ?? []);
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(
+    defaultPlayerIds ?? [],
+  );
   const [playerSearch, setPlayerSearch] = useState("");
 
   // Step 3: Teams
@@ -288,7 +293,6 @@ export function TournamentWizard({
           ? teams.length >= 2 && teams.every((t) => t.playerIds.length >= 1)
           : true;
 
-
   // Unassigned players (for pool display in step 3)
   const assignedIds = useMemo(
     () => new Set(teams.flatMap((t) => t.playerIds)),
@@ -301,9 +305,9 @@ export function TournamentWizard({
 
   return (
     <>
-      <div className="max-w-2xl mx-auto px-4 py-5 pb-8 sm:pb-5">
+      <div className="max-w-2xl mx-auto px-4 py-3 pb-8 sm:pb-5">
         {/* Back + Step indicator row */}
-        <div className="flex items-center gap-4 mb-6 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-4 py-2.5">
+        <div className="flex items-center gap-4 mb-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-4 py-2.5">
           <button
             onClick={() => (step === 0 ? router.back() : setStep((s) => s - 1))}
             className="inline-flex items-center gap-1 text-sm text-muted hover:text-orange-500 shrink-0 transition-colors"
@@ -422,7 +426,11 @@ export function TournamentWizard({
               className="w-full"
               size="lg"
               onClick={() => {
-                if (stepName === "Players" || (stepName === "Details" && hasDefaultPlayers)) initTeams();
+                if (
+                  stepName === "Players" ||
+                  (stepName === "Details" && hasDefaultPlayers)
+                )
+                  initTeams();
                 setStep((s) => s + 1);
               }}
               disabled={!canProceed}
@@ -449,7 +457,11 @@ export function TournamentWizard({
             className="w-full"
             size="lg"
             onClick={() => {
-              if (stepName === "Players" || (stepName === "Details" && hasDefaultPlayers)) initTeams();
+              if (
+                stepName === "Players" ||
+                (stepName === "Details" && hasDefaultPlayers)
+              )
+                initTeams();
               setStep((s) => s + 1);
             }}
             disabled={!canProceed}
@@ -590,6 +602,20 @@ function StepPlayers({
   playerSearch: string;
   setPlayerSearch: (v: string) => void;
 }) {
+  // Players visible in the list (filtered by active group tab + search)
+  const activeGroup = groups.find((g) => g.id === sourceGroupId);
+  const groupPlayerIds = activeGroup
+    ? new Set(activeGroup.members.map((m) => m.playerId))
+    : null;
+
+  const listPlayers = players.filter((p) => {
+    const inGroup = groupPlayerIds ? groupPlayerIds.has(p.id) : true;
+    const matchSearch = p.name
+      .toLowerCase()
+      .includes(playerSearch.toLowerCase());
+    return inGroup && matchSearch;
+  });
+
   function toggle(id: string) {
     setSelectedPlayerIds(
       selectedPlayerIds.includes(id)
@@ -598,9 +624,18 @@ function StepPlayers({
     );
   }
 
-  const filtered = players.filter((p) =>
-    p.name.toLowerCase().includes(playerSearch.toLowerCase()),
-  );
+  function selectGroup(g: GroupWithCount) {
+    const ids = g.members.map((m) => m.playerId);
+    setSourceGroupId(g.id);
+    setSelectedPlayerIds(ids);
+    setPlayerSearch("");
+  }
+
+  function clearGroup() {
+    setSourceGroupId(undefined);
+    setSelectedPlayerIds([]);
+    setPlayerSearch("");
+  }
 
   return (
     <div className="space-y-4">
@@ -616,7 +651,7 @@ function StepPlayers({
       {groups.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
           <button
-            onClick={() => setSourceGroupId(undefined)}
+            onClick={clearGroup}
             className={cn(
               "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
               !sourceGroupId
@@ -629,7 +664,7 @@ function StepPlayers({
           {groups.map((g) => (
             <button
               key={g.id}
-              onClick={() => setSourceGroupId(g.id)}
+              onClick={() => selectGroup(g)}
               className={cn(
                 "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
                 sourceGroupId === g.id
@@ -652,7 +687,7 @@ function StepPlayers({
           className="flex-1 h-9 px-3 rounded-lg border border-border bg-surface text-sm focus:outline-none focus:border-orange-500"
         />
         <button
-          onClick={() => setSelectedPlayerIds(players.map((p) => p.id))}
+          onClick={() => setSelectedPlayerIds(listPlayers.map((p) => p.id))}
           className="text-xs text-orange-500 font-medium shrink-0 hover:underline"
         >
           All
@@ -667,15 +702,20 @@ function StepPlayers({
 
       <div className="text-xs text-muted">
         {selectedPlayerIds.length} selected
+        {activeGroup && (
+          <span className="ml-1 text-orange-500">
+            · from {activeGroup.name}
+          </span>
+        )}
       </div>
 
       <div className="space-y-1 max-h-[44vh] overflow-y-auto bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-2">
-        {filtered.length === 0 ? (
+        {listPlayers.length === 0 ? (
           <p className="text-sm text-muted text-center py-8">
             No players found.
           </p>
         ) : (
-          filtered.map((player) => (
+          listPlayers.map((player) => (
             <button
               key={player.id}
               onClick={() => toggle(player.id)}

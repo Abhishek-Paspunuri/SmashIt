@@ -5,6 +5,7 @@ export async function getGroups(ownerId: string) {
     where: { ownerId, deletedAt: null },
     include: {
       _count: { select: { members: true } },
+      members: { select: { playerId: true } },
     },
     orderBy: { createdAt: "desc" },
   });
